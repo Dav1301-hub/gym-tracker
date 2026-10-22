@@ -45,12 +45,17 @@
       <header class="topbar">
         <h1>💪 Fuerza</h1>
         <div class="topbar-der">
+          <!-- Abre el temporizador de descanso en cualquier momento -->
+          <button id="btn-temporizador" type="button" class="sec chico" aria-label="Temporizador de descanso">⏱</button>
           <span id="usuario" class="usuario"></span>
           <button id="btn-salir" type="button" class="sec chico">Salir</button>
         </div>
       </header>
       <main id="vista" aria-live="polite"></main>
     </div>
+
+    <!-- Temporizador de descanso: panel flotante; su contenido lo dibuja js/app.js -->
+    <aside id="temporizador" class="temporizador" role="region" aria-label="Temporizador de descanso" hidden></aside>
   </div>
 
   <!-- Ventana emergente reutilizable (editar ejercicio) -->

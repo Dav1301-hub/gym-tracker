@@ -479,6 +479,7 @@ function guardarRegistro(ejercicioId, datos) {
   // Dejamos los valores en la tarjeta: la próxima sesión casi siempre parte de ellos.
   estado.borradores[ejercicioId] = { peso: num(peso), reps: String(reps), series: String(series) };
   aviso("Guardado ✔");
+  ofrecerTemporizador(); // tras cada serie: ¿60 o 90 s de descanso?
 }
 
 /** Primera letra en mayúscula: "pecho" → "Pecho". */
@@ -546,6 +547,183 @@ function abrirEditor(id) {
 }
 
 /* ====================================================================== */
+/*  Temporizador de descanso                                              */
+/* ====================================================================== */
+
+// Opciones de descanso, en segundos. Para añadir otra (p. ej. 120), agrégala aquí.
+const DURACIONES = [60, 90];
+
+const temporizador = {
+  visible: false,
+  estado: "elegir",   // "elegir" | "corriendo" | "pausado" | "terminado"
+  total: 0,           // duración de la cuenta actual (segundos)
+  ultima: 120,         // última duración elegida (se resalta en el selector)
+  finMs: 0,           // instante (en ms) en que termina, mientras corre
+  restanteMs: 0,      // milisegundos que faltan cuando está en pausa
+  reloj: null,        // id del setInterval
+};
+
+/*
+ * La cuenta NO resta 1 en cada tic: calcula cuánto falta comparando con la hora
+ * de fin (finMs). Así sigue siendo exacta aunque el navegador frene el
+ * temporizador al cambiar de pestaña.
+ */
+const msRestantes = () => Math.max(0, temporizador.estado === "corriendo"
+  ? temporizador.finMs - Date.now()
+  : temporizador.restanteMs);
+const mmss = (ms) => {
+  const s = Math.ceil(ms / 1000);
+  return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
+};
+
+/* ----- Aviso sonoro y vibración (los navegadores solo permiten sonido tras un toque del usuario) ----- */
+let audio;
+function prepararAudio() {
+  try {
+    audio ??= new (window.AudioContext || window.webkitAudioContext)();
+    audio.resume?.();
+  } catch { /* sin audio: seguimos sin sonido */ }
+}
+function avisarFinDescanso() {
+  try {
+    if (audio) {
+      [0, 0.35, 0.7].forEach((retraso) => { // tres pitidos
+        const osc = audio.createOscillator();
+        const vol = audio.createGain();
+        osc.frequency.value = 880;
+        vol.gain.value = 0.25;
+        osc.connect(vol);
+        vol.connect(audio.destination);
+        osc.start(audio.currentTime + retraso);
+        osc.stop(audio.currentTime + retraso + 0.2);
+      });
+    }
+    navigator.vibrate?.([200, 100, 200, 100, 400]);
+  } catch { /* no es crítico */ }
+}
+
+/* ----- Control de la cuenta regresiva ----- */
+
+/** Muestra el panel para elegir 60 / 90 s (se llama al guardar una serie y desde el botón ⏱). */
+function ofrecerTemporizador() {
+  const t = temporizador;
+  t.visible = true;
+  // Si ya hay una cuenta en marcha o en pausa, la dejamos como está; si no, mostramos las opciones.
+  if (t.estado !== "corriendo" && t.estado !== "pausado") t.estado = "elegir";
+  pintarTemporizador();
+}
+
+function iniciarTemporizador(segundos) {
+  const t = temporizador;
+  prepararAudio();
+  t.total = t.ultima = segundos;
+  t.finMs = Date.now() + segundos * 1000;
+  t.estado = "corriendo";
+  clearInterval(t.reloj);
+  t.reloj = setInterval(tictac, 250);
+  pintarTemporizador();
+}
+
+function tictac() {
+  if (temporizador.estado !== "corriendo") return;
+  if (msRestantes() <= 0) terminarTemporizador();
+  else actualizarTiempo();
+}
+
+function pausarTemporizador() {
+  const t = temporizador;
+  t.restanteMs = msRestantes();
+  t.estado = "pausado";
+  clearInterval(t.reloj);
+  pintarTemporizador();
+}
+
+function reanudarTemporizador() {
+  const t = temporizador;
+  prepararAudio();
+  t.finMs = Date.now() + t.restanteMs;
+  t.estado = "corriendo";
+  clearInterval(t.reloj);
+  t.reloj = setInterval(tictac, 250);
+  pintarTemporizador();
+}
+
+function terminarTemporizador() {
+  const t = temporizador;
+  clearInterval(t.reloj);
+  t.estado = "terminado";
+  t.restanteMs = 0;
+  avisarFinDescanso();
+  pintarTemporizador();
+}
+
+function cerrarTemporizador() {
+  const t = temporizador;
+  clearInterval(t.reloj);
+  t.visible = false;
+  t.estado = "elegir";
+  pintarTemporizador();
+}
+
+/* ----- Dibujado del panel ----- */
+
+/** Solo actualiza el número y la barra (se ejecuta 4 veces por segundo, sin redibujar los botones). */
+function actualizarTiempo() {
+  const panel = $("#temporizador");
+  const ms = msRestantes();
+  const tiempo = panel.querySelector(".tmp-tiempo");
+  const barra = panel.querySelector(".tmp-barra span");
+  if (tiempo) tiempo.textContent = mmss(ms);
+  if (barra) barra.style.width = `${Math.min(100, (ms / (temporizador.total * 1000)) * 100)}%`;
+}
+
+function pintarTemporizador() {
+  const t = temporizador;
+  const panel = $("#temporizador");
+  panel.hidden = !t.visible;
+  document.body.classList.toggle("con-temporizador", t.visible);
+  if (!t.visible) return;
+
+  panel.dataset.estado = t.estado;
+  const titulo = t.estado === "terminado" ? "⏱ ¡Descanso terminado!" : "⏱ Descanso";
+  const cabecera = `<div class="tmp-cab">
+      <p class="tmp-titulo"${t.estado === "terminado" ? ' role="alert"' : ""}>${titulo}</p>
+      <button type="button" class="tmp-cerrar" data-tmp="cerrar" aria-label="Cerrar temporizador">✕</button>
+    </div>`;
+
+  if (t.estado === "elegir") {
+    panel.innerHTML = cabecera + `<div class="tmp-opciones">${DURACIONES.map((s) => `
+      <button type="button" class="${s === t.ultima ? "primario" : ""}" data-tmp="iniciar" data-seg="${s}">${s} s</button>`).join("")}</div>`;
+    return;
+  }
+
+  // Botón principal según el estado: Pausar / Reanudar / (si terminó) Cerrar
+  const principal = {
+    corriendo: `<button type="button" class="primario" data-tmp="pausar">⏸ Pausar</button>`,
+    pausado: `<button type="button" class="primario" data-tmp="reanudar">▶ Reanudar</button>`,
+    terminado: `<button type="button" class="sec" data-tmp="cerrar">Cerrar</button>`,
+  }[t.estado];
+
+  panel.innerHTML = cabecera + `
+    <div class="tmp-tiempo" aria-label="Tiempo restante">${mmss(msRestantes())}</div>
+    <div class="tmp-barra"><span></span></div>
+    <div class="tmp-botones">${principal}<button type="button" data-tmp="reiniciar">↺ Reiniciar</button></div>`;
+  actualizarTiempo();
+}
+
+function alClicTemporizador(ev) {
+  const boton = ev.target.closest("[data-tmp]");
+  if (!boton) return;
+  switch (boton.dataset.tmp) {
+    case "iniciar": iniciarTemporizador(Number(boton.dataset.seg)); break;
+    case "pausar": pausarTemporizador(); break;
+    case "reanudar": reanudarTemporizador(); break;
+    case "reiniciar": iniciarTemporizador(temporizador.total); break; // vuelve a la duración elegida y arranca
+    case "cerrar": cerrarTemporizador(); break;
+  }
+}
+
+/* ====================================================================== */
 /*  Datos en vivo y sesión                                                */
 /* ====================================================================== */
 
@@ -597,6 +775,8 @@ function arrancar() {
     DB.entrar().catch((err) => $("#login-msg").textContent = `No se pudo iniciar sesión (${err.code || err.message}).`);
   });
   $("#btn-salir").addEventListener("click", () => DB.salir());
+  $("#btn-temporizador").addEventListener("click", ofrecerTemporizador);
+  $("#temporizador").addEventListener("click", alClicTemporizador);
   $(".tabbar").addEventListener("click", (ev) => {
     const boton = ev.target.closest("[data-vista]");
     if (boton) irA(boton.dataset.vista);
@@ -614,6 +794,7 @@ function arrancar() {
       render();
     } else {
       detener();
+      cerrarTemporizador();
       mostrarLogin();
     }
   });
