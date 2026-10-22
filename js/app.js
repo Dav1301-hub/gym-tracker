@@ -479,7 +479,7 @@ function guardarRegistro(ejercicioId, datos) {
   // Dejamos los valores en la tarjeta: la próxima sesión casi siempre parte de ellos.
   estado.borradores[ejercicioId] = { peso: num(peso), reps: String(reps), series: String(series) };
   aviso("Guardado ✔");
-  ofrecerTemporizador(); // tras cada serie: ¿60 o 90 s de descanso?
+  ofrecerTemporizador(); // tras cada serie: ¿150 o 180 s de descanso?
 }
 
 /** Primera letra en mayúscula: "pecho" → "Pecho". */
@@ -551,13 +551,13 @@ function abrirEditor(id) {
 /* ====================================================================== */
 
 // Opciones de descanso, en segundos. Para añadir otra (p. ej. 120), agrégala aquí.
-const DURACIONES = [60, 90];
+const DURACIONES = [150, 180];
 
 const temporizador = {
   visible: false,
   estado: "elegir",   // "elegir" | "corriendo" | "pausado" | "terminado"
   total: 0,           // duración de la cuenta actual (segundos)
-  ultima: 120,         // última duración elegida (se resalta en el selector)
+  ultima: 180,         // última duración elegida (se resalta en el selector)
   finMs: 0,           // instante (en ms) en que termina, mientras corre
   restanteMs: 0,      // milisegundos que faltan cuando está en pausa
   reloj: null,        // id del setInterval
@@ -604,7 +604,7 @@ function avisarFinDescanso() {
 
 /* ----- Control de la cuenta regresiva ----- */
 
-/** Muestra el panel para elegir 60 / 90 s (se llama al guardar una serie y desde el botón ⏱). */
+/** Muestra el panel para elegir 150 / 180 s (se llama al guardar una serie y desde el botón ⏱). */
 function ofrecerTemporizador() {
   const t = temporizador;
   t.visible = true;
