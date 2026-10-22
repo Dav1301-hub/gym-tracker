@@ -270,3 +270,44 @@ dialog::backdrop { background: rgba(0, 0, 0, 0.65); }
   main { padding-bottom: 48px; }
   #toast { bottom: 24px; }
 }
+
+/* ==========================================================================
+   Temporizador de descanso
+   Panel flotante sobre la barra de navegación. data-estado = elegir | corriendo | pausado | terminado
+   ========================================================================== */
+
+.temporizador {
+  position: fixed; left: 12px; right: 12px; z-index: 20;
+  margin: 0 auto; max-width: 460px;
+  bottom: calc(var(--tabbar) + 12px + env(safe-area-inset-bottom));
+  display: grid; gap: 10px; padding: 10px 14px 14px;
+  background: var(--s1); border: 1px solid var(--linea); border-radius: 20px;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.55);
+}
+.tmp-cab { display: flex; align-items: center; justify-content: space-between; }
+.tmp-titulo { margin: 0; font-size: 15px; font-weight: 700; }
+.tmp-cerrar { min-height: 40px; min-width: 40px; padding: 0; background: transparent; color: var(--muted); }
+
+.tmp-opciones, .tmp-botones { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.tmp-opciones button { min-height: 60px; font-size: 22px; font-weight: 700; border: 1px solid var(--linea); }
+
+.tmp-tiempo { text-align: center; font-size: 60px; font-weight: 800; line-height: 1; font-variant-numeric: tabular-nums; letter-spacing: 0.02em; }
+.tmp-barra { height: 6px; border-radius: 99px; background: var(--s2); overflow: hidden; }
+.tmp-barra span { display: block; height: 100%; width: 100%; background: var(--acento); }
+
+.temporizador[data-estado="pausado"] .tmp-tiempo { opacity: 0.5; }
+.temporizador[data-estado="terminado"] { border-color: var(--acento); animation: tmp-latido 1s ease-in-out 3; }
+.temporizador[data-estado="terminado"] .tmp-tiempo { color: var(--acento); }
+@keyframes tmp-latido { 50% { box-shadow: 0 0 0 6px rgba(198, 244, 50, 0.25); } }
+
+/* Mientras el panel está abierto, dejamos espacio para que no tape el contenido ni los avisos */
+body.con-temporizador main { padding-bottom: calc(var(--tabbar) + 190px + env(safe-area-inset-bottom)); }
+body.con-temporizador #toast { bottom: calc(var(--tabbar) + 190px + env(safe-area-inset-bottom)); }
+
+/* Escritorio: sin barra inferior; el panel se centra en el área de contenido (a la derecha del menú lateral).
+   Va DESPUÉS de las reglas base de arriba para poder sobrescribirlas. */
+@media (min-width: 900px) {
+  .temporizador { left: 232px; bottom: 24px; }
+  body.con-temporizador main { padding-bottom: 190px; }
+  body.con-temporizador #toast { bottom: 170px; }
+}
