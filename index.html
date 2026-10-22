@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <!-- viewport-fit=cover: aprovecha la pantalla completa en móviles con "notch" -->
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#0d1016">
+  <meta name="description" content="Registro personal de entrenamiento de fuerza y sobrecarga progresiva">
+
+  <!-- Permite "instalarla" en la pantalla de inicio del móvil -->
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" href="icons/icono.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="icons/icono-180.png">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="Fuerza">
+
+  <title>Fuerza · Registro de entrenamiento</title>
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+
+  <!-- Pantalla de acceso (se muestra mientras no hay sesión iniciada) -->
+  <section id="pantalla-login" class="login" hidden>
+    <div class="login-caja">
+      <div class="login-logo" aria-hidden="true">🏋️</div>
+      <h1>Fuerza</h1>
+      <p>Tu registro de entrenamiento y sobrecarga progresiva, en cualquier dispositivo.</p>
+      <button id="btn-entrar" class="primario grande">Entrar con Google</button>
+      <p id="login-msg" class="nota" role="status"></p>
+    </div>
+  </section>
+
+  <!-- Aplicación principal -->
+  <div id="app" hidden>
+
+    <!-- Barra de navegación: abajo en móvil (alcanzable con el pulgar), a la izquierda en pantallas grandes -->
+    <nav class="tabbar" aria-label="Secciones">
+      <button type="button" data-vista="hoy" class="activa"><span class="ico" aria-hidden="true">🏋️</span><span>Hoy</span></button>
+      <button type="button" data-vista="plan"><span class="ico" aria-hidden="true">🗓️</span><span>Plan</span></button>
+      <button type="button" data-vista="progreso"><span class="ico" aria-hidden="true">📈</span><span>Progreso</span></button>
+    </nav>
+
+    <div class="contenido">
+      <header class="topbar">
+        <h1>💪 Fuerza</h1>
+        <div class="topbar-der">
+          <span id="usuario" class="usuario"></span>
+          <button id="btn-salir" type="button" class="sec chico">Salir</button>
+        </div>
+      </header>
+      <main id="vista" aria-live="polite"></main>
+    </div>
+  </div>
+
+  <!-- Ventana emergente reutilizable (editar ejercicio) -->
+  <dialog id="modal"></dialog>
+
+  <!-- Mensajes breves ("Guardado ✔", errores…) -->
+  <div id="toast" role="status" aria-live="polite"></div>
+
+  <noscript>Esta aplicación necesita JavaScript para funcionar.</noscript>
+
+  <script type="module" src="js/app.js"></script>
+</body>
+</html>
